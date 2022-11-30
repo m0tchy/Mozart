@@ -11,3 +11,4 @@ folder/
 __pycache__
 .vscode
 .ipynb_checkpoints
+.venv
