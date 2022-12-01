@@ -1,14 +1,13 @@
-import cv2
+import pickle
 import random
-import imutils
 from glob import glob
+
+import cv2
+import numpy as np
+from sklearn import svm
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.neural_network import MLPClassifier
-from sklearn import svm
-import numpy as np
-import matplotlib.pyplot as plt
-import pickle
 
 dataset_path = 'train_data/data'
 target_img_size = (100, 100)
@@ -25,11 +24,14 @@ def extract_hsv_histogram(img):
     hsv = cv2.cvtColor(resized, cv2.COLOR_BGR2HSV)
     hist = cv2.calcHist([hsv], [0, 1, 2], None, [8, 8, 8],
                         [0, 180, 0, 256, 0, 256])
-    if imutils.is_cv2():
-        hist = cv2.normalize(hist)
-    else:
-        cv2.normalize(hist, hist)
-    return hist.flatten()
+    # opencv 2 と 3 で仕様が変わって、ダミー値を dst に渡さないといけなくなったが、
+    # もうすでに直っている？
+    hist = cv2.normalize(hist)
+    # if imutils.is_cv2():
+    #     hist = cv2.normalize(hist)
+    # else:
+    #     cv2.normalize(hist, hist)
+    # return hist.flatten()
 
 
 def extract_hog_features(img):

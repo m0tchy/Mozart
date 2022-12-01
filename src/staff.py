@@ -1,13 +1,16 @@
-from rle import *
-from commonfunctions import *
 from collections import Counter
 
+import numpy as np
+from skimage import filters, morphology
+
+import commonfunctions
+import rle as rlelib
 
 row_percentage = 0.3
 
 
 def calculate_thickness_spacing(rle, most_common):
-    bw_patterns = [most_common_bw_pattern(col, most_common) for col in rle]
+    bw_patterns = [rlelib.most_common_bw_pattern(col, most_common) for col in rle]
     bw_patterns = [x for x in bw_patterns if x]  # Filter empty patterns
 
     flattened = []
@@ -56,7 +59,7 @@ def remove_staff_lines(rle, vals, thickness, shape):
         n_rle.append(rl)
         n_vals.append(val)
 
-    return hv_decode(n_rle, n_vals, shape)
+    return rlelib.hv_decode(n_rle, n_vals, shape)
 
 
 def remove_staff_lines_2(thickness, img_with_staff):
@@ -70,7 +73,7 @@ def remove_staff_lines_2(thickness, img_with_staff):
         projected.append([1]*proj_sum + [0]*(cols-proj_sum))
         if(proj_sum <= row_percentage*cols):
             img[i, :] = 1
-    closed = binary_opening(img, np.ones((3*thickness, 1)))
+    closed = morphology.binary_opening(img, np.ones((3*thickness, 1)))
     return closed
 
 
@@ -121,25 +124,25 @@ def get_staff_row_position(img):
 
 
 def coordinator(bin_img, horizontal):
-    rle, vals = hv_rle(bin_img)
-    most_common = get_most_common(rle)
+    rle, vals = rlelib.hv_rle(bin_img)
+    most_common = rlelib.get_most_common(rle)
     thickness, spacing = calculate_thickness_spacing(rle, most_common)
     start = 0
     if horizontal:
         no_staff_img = remove_staff_lines_2(thickness, bin_img)
-        staff_lines = otsu(bin_img - no_staff_img)
+        staff_lines = commonfunctions.otsu(bin_img - no_staff_img)
         start = horizontal_projection(bin_img)
     else:
         no_staff_img = remove_staff_lines(rle, vals, thickness, bin_img.shape)
-        no_staff_img = binary_closing(
+        no_staff_img = morphology.binary_closing(
             no_staff_img, np.ones((thickness+2, thickness+2)))
-        no_staff_img = median(no_staff_img)
-        no_staff_img = binary_opening(
+        no_staff_img = filters.median(no_staff_img)
+        no_staff_img = morphology.binary_opening(
             no_staff_img, np.ones((thickness+2, thickness+2)))
-        staff_lines = otsu(bin_img - no_staff_img)
-        staff_lines = binary_erosion(
+        staff_lines = commonfunctions.otsu(bin_img - no_staff_img)
+        staff_lines = morphology.binary_erosion(
             staff_lines, np.ones((thickness+2, thickness+2)))
-        staff_lines = median(staff_lines, selem=square(21))
+        staff_lines = filters.median(staff_lines, selem=morphology.square(21))
         start = get_staff_row_position(staff_lines)
     staff_row_positions = get_rows(
         start, most_common, thickness, spacing)

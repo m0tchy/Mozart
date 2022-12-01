@@ -1,15 +1,6 @@
-
-
-import skimage.io as io
 import matplotlib.pyplot as plt
 import numpy as np
-from skimage.exposure import histogram
-from matplotlib.pyplot import bar
-from skimage.color import rgb2gray
-from skimage.filters import threshold_otsu, gaussian, median
-from skimage.morphology import binary_opening, binary_closing, binary_dilation, binary_erosion, closing, opening, square, skeletonize, disk
-from skimage.feature import canny
-from skimage.transform import resize
+from skimage import color, filters
 
 
 def show_images(images, titles=None):
@@ -34,7 +25,7 @@ def showHist(img):
     plt.figure()
     imgHist = histogram(img, nbins=256)
 
-    bar(imgHist[1].astype(np.uint8), imgHist[0], width=0.8, align='center')
+    plt.bar(imgHist[1].astype(np.uint8), imgHist[0], width=0.8, align='center')
 
 
 def gray_img(img):
@@ -42,7 +33,7 @@ def gray_img(img):
     img: rgb image
     return: gray image, pixel values 0:255
     '''
-    gray = rgb2gray(img)
+    gray = color.rgb2gray(img)
     if len(img.shape) == 3:
         gray = gray*255
     return gray
@@ -54,13 +45,13 @@ def otsu(img):
     img: gray image
     return: binary image, pixel values 0:1
     '''
-    blur = gaussian(img)
-    otsu_bin = 255*(blur > threshold_otsu(blur))
+    blur = filters.gaussian(img)
+    otsu_bin = 255*(blur > filters.threshold_otsu(blur))
     return (otsu_bin/255).astype(np.int32)
 
 
 def get_gray(img):
-    gray = rgb2gray(np.copy(img))
+    gray = color.rgb2gray(np.copy(img))
     return gray
 
 

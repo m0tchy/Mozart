@@ -1,7 +1,5 @@
-from commonfunctions import *
-from skimage.measure import label, regionprops
 from skimage.color import label2rgb
-from box import Box
+from skimage.measure import label, regionprops
 
 
 def get_connected_components(img_without_staff, img_with_staff):

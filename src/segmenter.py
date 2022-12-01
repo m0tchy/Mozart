@@ -1,17 +1,20 @@
-from rle import *
-from commonfunctions import *
-from staff import calculate_thickness_spacing, remove_staff_lines
+import numpy as np
+from skimage import morphology
+
+import commonfunctions
+import rle
+import staff
 
 
 class Segmenter(object):
     def __init__(self, bin_img):
         self.bin_img = bin_img
-        self.rle, self.vals = hv_rle(self.bin_img)
-        self.most_common = get_most_common(self.rle)
-        self.thickness, self.spacing = calculate_thickness_spacing(
+        self.rle, self.vals = rle.hv_rle(self.bin_img)
+        self.most_common = rle.get_most_common(self.rle)
+        self.thickness, self.spacing = staff.calculate_thickness_spacing(
             self.rle, self.most_common)
         self.thick_space = self.thickness + self.spacing
-        self.no_staff_img = remove_staff_lines(
+        self.no_staff_img = staff.remove_staff_lines(
             self.rle, self.vals, self.thickness, self.bin_img.shape)
 
         self.segment()
@@ -20,10 +23,10 @@ class Segmenter(object):
         thickness = np.copy(self.thickness)
         # if thickness % 2 == 0:
         #     thickness += 1
-        return opening(region, np.ones((thickness, thickness)))
+        return morphology.opening(region, np.ones((thickness, thickness)))
 
     def segment(self):
-        self.line_indices = get_line_indices(histogram(self.bin_img, 0.8))
+        self.line_indices = commonfunctions.get_line_indices(commonfunctions.histogram(self.bin_img, 0.8))
         if len(self.line_indices) < 10:
             self.regions_without_staff = [
                 np.copy(self.open_region(self.no_staff_img))]

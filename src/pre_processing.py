@@ -1,16 +1,13 @@
-from commonfunctions import *
-from skimage.transform import probabilistic_hough_line, hough_line, rotate, hough_line_peaks
-from skimage.feature import corner_harris
-import cv2
-from staff import *
+import numpy as np
+from skimage import feature, transform
 
 
 def deskew(image):
-    edges = canny(image, low_threshold=50, high_threshold=150, sigma=2)
-    harris = corner_harris(edges)
+    edges = feature.canny(image, low_threshold=50, high_threshold=150, sigma=2)
+    harris = feature.corner_harris(edges)
     tested_angles = np.linspace(-np.pi / 2, np.pi / 2, 360)
-    h, theta, d = hough_line(harris, theta=tested_angles)
-    out, angles, d = hough_line_peaks(h, theta, d)
+    h, theta, d = transform.hough_line(harris, theta=tested_angles)
+    out, angles, d = transform.hough_line_peaks(h, theta, d)
     rotation_number = np.average(np.degrees(angles))
     if rotation_number < 45 and rotation_number != 0:
         rotation_number += 90
@@ -18,7 +15,7 @@ def deskew(image):
 
 
 def rotation(img, angle):
-    image = rotate(img, angle, resize=True, mode='edge')
+    image = transform.rotate(img, angle, resize=True, mode='edge')
     return image
 
 
