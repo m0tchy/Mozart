@@ -6,7 +6,7 @@ from skimage import filters, morphology
 import commonfunctions
 import rle as rlelib
 
-row_percentage = 0.3
+ROW_PERCENTAGE = 0.3
 
 
 def calculate_thickness_spacing(rle, most_common):
@@ -71,7 +71,7 @@ def remove_staff_lines_2(thickness, img_with_staff):
         for j in range(cols):
             proj_sum += img[i][j] == 1
         projected.append([1]*proj_sum + [0]*(cols-proj_sum))
-        if(proj_sum <= row_percentage*cols):
+        if(proj_sum <= ROW_PERCENTAGE*cols):
             img[i, :] = 1
     closed = morphology.binary_opening(img, np.ones((3*thickness, 1)))
     return closed

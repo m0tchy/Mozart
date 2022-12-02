@@ -1,15 +1,16 @@
-from commonfunctions import *
-from pre_processing import *
-from connected_componentes import *
-from staff import calculate_thickness_spacing, remove_staff_lines, coordinator
-from segmenter import Segmenter
-from fit import predict
-from glob import glob
-import cv2
-import pickle
-from scipy.ndimage import binary_fill_holes
-from skimage.morphology import thin
 import argparse
+import glob
+
+import numpy as np
+from scipy import ndimage
+from skimage import filters, io, morphology
+
+import commonfunctions
+import connected_componentes
+import fit
+import pre_processing
+import segmenter as seg
+import staff
 
 label_map = {
     0: {
@@ -111,19 +112,19 @@ def recognize(out_file, most_common, coord_imgs, imgs_with_staff, imgs_spacing, 
         res = []
         prev = ''
         time_name = ''
-        primitives, prim_with_staff, boundary = get_connected_components(
+        primitives, prim_with_staff, boundary = connected_componentes.get_connected_components(
             img, imgs_with_staff[i])
         for j, prim in enumerate(primitives):
-            prim = binary_opening(prim, square(
+            prim = morphology.binary_opening(prim, morphology.square(
                 np.abs(most_common-imgs_spacing[i])))
             saved_img = (255*(1 - prim)).astype(np.uint8)
-            labels = predict(saved_img)
+            labels = fit.predict(saved_img)
             octave = None
             label = labels[0]
             if label in black_names:
                 test_img = np.copy(prim_with_staff[j])
-                test_img = binary_dilation(test_img, disk(disk_size))
-                comps, comp_w_staff, bounds = get_connected_components(
+                test_img = morphology.binary_dilation(test_img, morphology.disk(disk_size))
+                comps, comp_w_staff, bounds = connected_componentes.get_connected_components(
                     test_img, prim_with_staff[j])
                 comps, comp_w_staff, bounds = filter_beams(
                     comps, comp_w_staff, bounds)
@@ -148,9 +149,9 @@ def recognize(out_file, most_common, coord_imgs, imgs_with_staff, imgs_spacing, 
                         l = label_map[line_idx][p]
                         res.append(get_note_name(prev, l, label))
             elif label in ring_names:
-                head_img = 1-binary_fill_holes(1-prim)
-                head_img = binary_closing(head_img, disk(disk_size))
-                comps, comp_w_staff, bounds = get_connected_components(
+                head_img = 1-ndimage.binary_fill_holes(1-prim)
+                head_img = morphology.binary_closing(head_img, morphology.disk(disk_size))
+                comps, comp_w_staff, bounds = connected_componentes.get_connected_components(
                     head_img, prim_with_staff[j])
                 for bbox in bounds:
                     c = bbox[2]+boundary[j][0]
@@ -183,8 +184,8 @@ def recognize(out_file, most_common, coord_imgs, imgs_with_staff, imgs_spacing, 
             elif label in ['t2', 't4']:
                 time_name += label[1]
             elif label == 'chord':
-                img = thin(1-prim.copy(), max_iter=20)
-                head_img = binary_closing(1-img, disk(disk_size))
+                img = morphology.thin(1-prim.copy(), max_iter=20)
+                head_img = morphology.binary_closing(1-img, morphology.disk(disk_size))
             if label not in ['flat', 'flat_b', 'cross', '#', '#_b']:
                 prev = ''
         if len(time_name) == 2:
@@ -203,27 +204,27 @@ def recognize(out_file, most_common, coord_imgs, imgs_with_staff, imgs_spacing, 
 
 
 def main(input_path, output_path):
-    imgs_path = sorted(glob(f'{input_path}/*'))
+    imgs_path = sorted(glob.glob(f'{input_path}/*'))
     for img_path in imgs_path:
         img_name = img_path.split('/')[-1].split('.')[0]
         out_file = open(f'{output_path}/{img_name}.txt', "w")
         print(f"Processing new image {img_name}...")
         img = io.imread(img_path)
-        img = gray_img(img)
-        horizontal = IsHorizontal(img)
+        img = commonfunctions.gray_img(img)
+        horizontal = pre_processing.IsHorizontal(img)
         if horizontal == False:
-            theta = deskew(img)
-            img = rotation(img, theta)
-            img = get_gray(img)
-            img = get_thresholded(img, threshold_otsu(img))
-            img = get_closer(img)
-            horizontal = IsHorizontal(img)
+            theta = pre_processing.deskew(img)
+            img = pre_processing.rotation(img, theta)
+            img = commonfunctions.get_gray(img)
+            img = commonfunctions.get_thresholded(img, filters.threshold_otsu(img))
+            img = pre_processing.get_closer(img)
+            horizontal = pre_processing.IsHorizontal(img)
 
         original = img.copy()
-        gray = get_gray(img)
-        bin_img = get_thresholded(gray, threshold_otsu(gray))
+        gray = commonfunctions.get_gray(img)
+        bin_img = commonfunctions.get_thresholded(gray, filters.threshold_otsu(gray))
 
-        segmenter = Segmenter(bin_img)
+        segmenter = seg.Segmenter(bin_img)
         imgs_with_staff = segmenter.regions_with_staff
         most_common = segmenter.most_common
 
@@ -233,7 +234,7 @@ def main(input_path, output_path):
         imgs_rows = []
         coord_imgs = []
         for i, img in enumerate(imgs_with_staff):
-            spacing, rows, no_staff_img = coordinator(img, horizontal)
+            spacing, rows, no_staff_img = staff.coordinator(img, horizontal)
             imgs_rows.append(rows)
             imgs_spacing.append(spacing)
             coord_imgs.append(no_staff_img)
